@@ -39,7 +39,7 @@ for (let level = 1; level <= 4; level += 1) {
 }
 
 assert.deepEqual([...seenTypes.get(1)].sort(), ["兩個整數相乘", "兩個整數相除"]);
-assert.deepEqual([...seenTypes.get(2)].sort(), ["三個整數連乘", "三個整數連除", "小數連乘"]);
+assert.deepEqual([...seenTypes.get(2)].sort(), ["三個整數連乘", "三個整數連除", "小數連乘", "帶分數乘除", "簡單分數乘除"]);
 assert.deepEqual([...seenTypes.get(3)].sort(), ["分數乘除", "帶分數括號運算", "括號除法"]);
 assert.deepEqual([...seenTypes.get(4)].sort(), ["加減乘除混合", "括號混合運算", "雙括號混合運算"]);
 

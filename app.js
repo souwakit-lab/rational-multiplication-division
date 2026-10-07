@@ -10,7 +10,7 @@ const studentDB = {
 
 const levelInfo = {
   1: { title: "整數乘除", rank: "符號戰士", mission: "兩個整數乘除", hint: "先判斷結果的正負號，再計算兩個數的絕對值。", avatar: "player-lv1.png" },
-  2: { title: "連乘連除", rank: "次序計算員", mission: "三個數與簡單小數", hint: "沒有括號時，由左至右完成連乘或連除。", avatar: "player-lv4.png" },
+  2: { title: "連乘連除", rank: "次序計算員", mission: "連乘連除、分數與帶分數", hint: "沒有括號時由左至右計算；除以分數時改為乘以倒數。", avatar: "player-lv4.png" },
   3: { title: "括號與分數", rank: "分數解碼員", mission: "括號、分數與帶分數", hint: "先算括號，除以分數時改為乘以它的倒數。", avatar: "player-lv4.png" },
   4: { title: "四則混合", rank: "有理數大師", mission: "加減乘除混合運算", hint: "先括號、再乘除、後加減，相同級別由左至右。", avatar: "player-lv7.png" },
 };
