@@ -97,7 +97,7 @@
   }
 
   function generateLevel2(rng) {
-    const mode = randomInt(0, 4, rng);
+    const mode = randomInt(0, 2, rng);
     if (mode === 0) {
       const values = [nonZeroInt(-9, 9, rng), nonZeroInt(-9, 9, rng), nonZeroInt(-9, 9, rng)];
       const fractions = values.map((value) => new FractionClass(value));
@@ -111,64 +111,65 @@
     }
 
     if (mode === 1) {
+      const variant = randomInt(0, 2, rng);
+      if (variant === 1) {
+        const dividend = randomSign(rng) * randomInt(4, 24, rng);
+        const divisor = randomSign(rng) * randomInt(2, 6, rng);
+        const numerator = randomSign(rng) * randomInt(1, 4, rng);
+        const denominator = randomInt(Math.abs(numerator) + 1, Math.abs(numerator) + 5, rng);
+        const fraction = new FractionClass(numerator, denominator);
+        const first = new FractionClass(dividend).div(divisor);
+        const answer = first.div(fraction);
+        return question(2, "三個數連除", `${integerTex(dividend, true)} \\div ${integerTex(divisor, true)} \\div ${signedFractionTex(fraction)}`, answer, [
+          "連除沒有括號時，必須由左至右計算。",
+          `${integerTex(dividend, true)} \\div ${integerTex(divisor, true)} = ${fractionTex(first)}`,
+          `${fractionTex(first)} \\div ${signedFractionTex(fraction)} = ${fractionTex(first)} \\times ${signedFractionTex(fraction.inverse())} = ${fractionTex(answer)}`,
+        ]);
+      }
+
+      if (variant === 2) {
+        const whole = randomInt(1, 4, rng);
+        const numerator = randomInt(1, 4, rng);
+        const denominator = randomInt(numerator + 1, numerator + 5, rng);
+        const mixed = new FractionClass(randomSign(rng) * (whole * denominator + numerator), denominator);
+        const fractionNumerator = randomSign(rng) * randomInt(1, 4, rng);
+        const fractionDenominator = randomInt(Math.abs(fractionNumerator) + 1, Math.abs(fractionNumerator) + 5, rng);
+        const fraction = new FractionClass(fractionNumerator, fractionDenominator);
+        const divisor = randomSign(rng) * randomInt(2, 6, rng);
+        const first = mixed.div(fraction);
+        const answer = first.div(divisor);
+        const mixedTex = mixedNumberTex(mixed);
+        return question(2, "三個數連除", `${mixedTex} \\div ${signedFractionTex(fraction)} \\div ${integerTex(divisor, true)}`, answer, [
+          `先把帶分數化為假分數：${mixedTex} = ${signedFractionTex(mixed)}`,
+          `${signedFractionTex(mixed)} \\div ${signedFractionTex(fraction)} = ${signedFractionTex(mixed)} \\times ${signedFractionTex(fraction.inverse())} = ${fractionTex(first)}`,
+          `${fractionTex(first)} \\div ${integerTex(divisor, true)} = ${fractionTex(answer)}`,
+        ]);
+      }
+
       const divisor1 = randomSign(rng) * randomInt(2, 6, rng);
       const divisor2 = randomSign(rng) * randomInt(2, 6, rng);
       const quotient = randomSign(rng) * randomInt(1, 10, rng);
       const dividend = quotient * divisor1 * divisor2;
       const first = new FractionClass(dividend).div(divisor1);
       const answer = first.div(divisor2);
-      return question(2, "三個整數連除", `${integerTex(dividend, true)} \\div ${integerTex(divisor1, true)} \\div ${integerTex(divisor2, true)}`, answer, [
+      return question(2, "三個數連除", `${integerTex(dividend, true)} \\div ${integerTex(divisor1, true)} \\div ${integerTex(divisor2, true)}`, answer, [
         "連除沒有括號時，必須由左至右計算。",
         `${integerTex(dividend, true)} \\div ${integerTex(divisor1, true)} = ${fractionTex(first)}`,
         `${fractionTex(first)} \\div ${integerTex(divisor2, true)} = ${fractionTex(answer)}`,
       ]);
     }
 
-    if (mode === 2) {
-      const left = nonZeroInt(-8, 8, rng);
-      const middle = nonZeroInt(-8, 8, rng);
-      const decimal = new FractionClass(randomSign(rng) * randomInt(2, 9, rng), 10);
-      const first = new FractionClass(left).mul(middle);
-      const answer = first.mul(decimal);
-      const decimalDisplay = `\\left(${decimal.s < 0 ? "-" : "+"}${decimalTex(decimal.abs())}\\right)`;
-      return question(2, "小數連乘", `${integerTex(left, true)} \\times ${integerTex(middle, true)} \\times ${decimalDisplay}`, answer, [
-        signRule([new FractionClass(left), new FractionClass(middle), decimal], "\\times"),
-        `${integerTex(left, true)} \\times ${integerTex(middle, true)} = ${fractionTex(first)}`,
-        `${fractionTex(first)} \\times ${decimalDisplay} = ${decimalTex(answer)}`,
-      ], decimalTex(answer));
-    }
-
-    if (mode === 3) {
-      const numerator = randomSign(rng) * randomInt(1, 5, rng);
-      const denominator = randomInt(Math.abs(numerator) + 1, Math.abs(numerator) + 5, rng);
-      const fraction = new FractionClass(numerator, denominator);
-      const integer = randomSign(rng) * randomInt(2, 8, rng);
-      const divide = rng() < 0.5;
-      const answer = divide ? fraction.div(integer) : fraction.mul(integer);
-      const operation = divide ? "\\div" : "\\times";
-      return question(2, "簡單分數乘除", `${signedFractionTex(fraction)} ${operation} ${integerTex(integer, true)}`, answer, [
-        signRule([fraction, new FractionClass(integer)], operation),
-        divide ? "除以一個數，等於乘以它的倒數。" : "整數可寫成分母為 1 的分數。",
-        `${signedFractionTex(fraction)} ${operation} ${integerTex(integer, true)} = ${fractionTex(answer)}`,
-      ]);
-    }
-
-    const whole = randomInt(1, 4, rng);
-    const numerator = randomInt(1, 4, rng);
-    const denominator = randomInt(numerator + 1, numerator + 5, rng);
-    const mixed = new FractionClass(randomSign(rng) * (whole * denominator + numerator), denominator);
-    const fractionNumerator = randomSign(rng) * randomInt(1, 4, rng);
-    const fractionDenominator = randomInt(Math.abs(fractionNumerator) + 1, Math.abs(fractionNumerator) + 5, rng);
-    const fraction = new FractionClass(fractionNumerator, fractionDenominator);
-    const divide = rng() < 0.5;
-    const answer = divide ? mixed.div(fraction) : mixed.mul(fraction);
-    const operation = divide ? "\\div" : "\\times";
-    const mixedTex = mixedNumberTex(mixed);
-    return question(2, "帶分數乘除", `${mixedTex} ${operation} ${signedFractionTex(fraction)}`, answer, [
-      `把帶分數化為假分數：${mixedTex} = ${signedFractionTex(mixed)}`,
-      divide ? `除以分數改為乘以倒數：${signedFractionTex(mixed)} \\times ${signedFractionTex(fraction.inverse())}` : "分子乘分子，分母乘分母。",
-      `${signedFractionTex(mixed)} ${operation} ${signedFractionTex(fraction)} = ${fractionTex(answer)}`,
-    ]);
+    const left = nonZeroInt(-8, 8, rng);
+    const middle = nonZeroInt(-8, 8, rng);
+    const decimal = new FractionClass(randomSign(rng) * randomInt(2, 9, rng), 10);
+    const first = new FractionClass(left).mul(middle);
+    const answer = first.mul(decimal);
+    const decimalDisplay = `\\left(${decimal.s < 0 ? "-" : "+"}${decimalTex(decimal.abs())}\\right)`;
+    return question(2, "小數連乘", `${integerTex(left, true)} \\times ${integerTex(middle, true)} \\times ${decimalDisplay}`, answer, [
+      signRule([new FractionClass(left), new FractionClass(middle), decimal], "\\times"),
+      `${integerTex(left, true)} \\times ${integerTex(middle, true)} = ${fractionTex(first)}`,
+      `${fractionTex(first)} \\times ${decimalDisplay} = ${decimalTex(answer)}`,
+    ], decimalTex(answer));
   }
 
   function generateLevel3(rng) {

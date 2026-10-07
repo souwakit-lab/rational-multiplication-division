@@ -15,6 +15,8 @@ assert.equal(core.getLevelXp(2), 500);
 assert.equal(core.getLevelXp(4), 500);
 
 const seenTypes = new Map();
+let level2HasFractionDivision = false;
+let level2HasMixedDivision = false;
 for (let level = 1; level <= 4; level += 1) {
   const rng = seeded(700 + level);
   const types = new Set();
@@ -33,13 +35,19 @@ for (let level = 1; level <= 4; level += 1) {
       const operands = item.tex.match(/\d+/g).map(Number);
       assert.ok(operands.every((value) => value >= 1 && value <= 9));
     }
+    if (level === 2 && item.type === "三個數連除") {
+      level2HasFractionDivision ||= item.tex.includes("\\frac");
+      level2HasMixedDivision ||= /\d+\\frac/.test(item.tex);
+    }
     types.add(item.type);
   }
   seenTypes.set(level, types);
 }
 
 assert.deepEqual([...seenTypes.get(1)].sort(), ["兩個整數相乘", "兩個整數相除"]);
-assert.deepEqual([...seenTypes.get(2)].sort(), ["三個整數連乘", "三個整數連除", "小數連乘", "帶分數乘除", "簡單分數乘除"]);
+assert.deepEqual([...seenTypes.get(2)].sort(), ["三個整數連乘", "三個數連除", "小數連乘"]);
+assert.equal(level2HasFractionDivision, true);
+assert.equal(level2HasMixedDivision, true);
 assert.deepEqual([...seenTypes.get(3)].sort(), ["分數乘除", "帶分數括號運算", "括號除法"]);
 assert.deepEqual([...seenTypes.get(4)].sort(), ["加減乘除混合", "括號混合運算", "雙括號混合運算"]);
 
