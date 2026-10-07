@@ -27,11 +27,12 @@ let syncInFlight = false;
 let syncQueued = false;
 let progressDirty = false;
 let selectedStatsLevel = "all";
+let studentExportCache = null;
 
 const $ = (id) => document.getElementById(id);
 
 function defaultProgress() {
-  return { level: 1, xp: 0, total: 0, correct: 0, streak: 0, mistakes: 0, levelStats: emptyLevelStats() };
+  return { level: 1, xp: 0, total: 0, correct: 0, streak: 0, mistakes: 0, mistakeHistory: [], levelStats: emptyLevelStats() };
 }
 
 function emptyLevelStats() {
@@ -103,6 +104,8 @@ function init() {
   });
   $("reset-progress").addEventListener("click", () => $("reset-dialog").showModal());
   $("confirm-reset").addEventListener("click", resetProgress);
+  $("download-student-overall").addEventListener("click", downloadStudentOverall);
+  $("download-student-mistakes").addEventListener("click", downloadStudentMistakes);
   document.addEventListener("keydown", handlePhysicalKeyboard);
   if (window.lucide) lucide.createIcons();
   else $("lucide-script")?.addEventListener("load", () => lucide.createIcons(), { once: true });
@@ -134,6 +137,7 @@ function login() {
   const name = studentDB[className]?.[id];
   if (!name) return;
   player = { className, id, name };
+  studentExportCache = null;
   progress = loadProgress();
   progressDirty = false;
   $("login-status").textContent = "";
@@ -161,7 +165,8 @@ async function loadRemoteProgress(localTotal) {
       return;
     }
     const previousLevel = progress.level;
-    progress = { ...defaultProgress(), ...data.player, levelStats: normalizeLevelStats(data.levelStats || data.player.levelStats) };
+    const localMistakeHistory = Array.isArray(progress.mistakeHistory) ? progress.mistakeHistory : [];
+    progress = { ...defaultProgress(), ...data.player, mistakeHistory:localMistakeHistory, levelStats: normalizeLevelStats(data.levelStats || data.player.levelStats) };
     saveProgress();
     updateProgressUI();
     if (progress.level !== previousLevel) {
@@ -267,7 +272,14 @@ function submitAnswer() {
   currentStats.streak = correct ? currentStats.streak + 1 : 0;
   progress.levelStats = levelStats;
   progressDirty = true;
+  studentExportCache = null;
   progress.mistakes = correct ? 0 : (Number(progress.mistakes) || 0) + 1;
+  if (!correct) {
+    progress.mistakeHistory = [...(progress.mistakeHistory || []), {
+      timestamp:new Date().toISOString(), level:question.level, question:question.tex,
+      studentAnswer:entry, correctAnswer:question.answer.toFraction(),
+    }].slice(-300);
+  }
   pendingDamage += correct ? 45 : 0;
   pendingAnswers.push({
     level: question.level,
@@ -416,6 +428,7 @@ function handlePhysicalKeyboard(event) {
 
 function resetProgress() {
   progress = defaultProgress();
+  studentExportCache = null;
   progressDirty = true;
   saveProgress();
   pendingAnswers = [];
@@ -426,6 +439,89 @@ function resetProgress() {
   updateProgressUI();
   nextQuestion();
 }
+
+function localStudentExportData() {
+  return {
+    player: { ...player, ...progress },
+    levelStats: [1,2,3,4].map((level) => ({ level, ...normalizeLevelStats(progress.levelStats)[level] })),
+    wrongAnswers: Array.isArray(progress.mistakeHistory) ? progress.mistakeHistory : [],
+  };
+}
+
+async function getStudentExportData() {
+  if (!player) throw new Error("請先登入");
+  if (studentExportCache && Date.now() - studentExportCache.time < 10000) return studentExportCache.data;
+  if (!API_URL) return localStudentExportData();
+  const response = await fetch(`${API_URL}?action=getRationalMulDivStudentExportData&className=${encodeURIComponent(player.className)}&id=${player.id}&t=${Date.now()}`, { cache:"no-store" });
+  if (!response.ok) throw new Error("Unable to download student data");
+  const remote = await response.json();
+  const local = localStudentExportData();
+  const data = Number(remote.player?.total || 0) >= Number(local.player.total || 0) ? { ...remote } : { ...local };
+  const mistakes = [...(remote.wrongAnswers || []), ...(local.wrongAnswers || [])];
+  data.wrongAnswers = [...new Map(mistakes.map((item) => [`${item.level}|${item.question}|${item.studentAnswer}|${item.correctAnswer}`, item])).values()];
+  studentExportCache = { time:Date.now(), data };
+  return data;
+}
+
+function studentTotalXp(student) {
+  const completedLevelXp = [0, 0, 1500, 2000, 2500];
+  const level = Math.min(4, Math.max(1, Number(student.level) || 1));
+  return completedLevelXp[level] + Number(student.xp || 0);
+}
+
+async function withStudentDownload(buttonId, task) {
+  const button = $(buttonId);
+  button.disabled = true;
+  $("student-download-status").textContent = "整理數據中...";
+  try {
+    await task();
+    $("student-download-status").textContent = "下載完成";
+  } catch (error) {
+    console.error(error);
+    $("student-download-status").textContent = "下載失敗，請稍後重試";
+  } finally {
+    button.disabled = false;
+  }
+}
+
+function downloadStudentOverall() {
+  return withStudentDownload("download-student-overall", async () => {
+    const data = await getStudentExportData();
+    const student = data.player || { ...player, ...progress };
+    const levels = normalizeLevelStats(data.levelStats);
+    const headers = ["班別","學號","姓名","目前 Level","目前 XP","累積 XP","總作答","答對","答錯","正確率","目前連勝","連錯"];
+    const row = [student.className,student.id,student.name,student.level,student.xp,studentTotalXp(student),student.total,student.correct,Math.max(0,Number(student.total)-Number(student.correct)),student.total ? `${Math.round(Number(student.correct)/Number(student.total)*100)}%` : "--",student.streak,student.mistakes];
+    [1,2,3,4].forEach((level) => {
+      const stats = levels[level];
+      headers.push(`L${level} 作答`,`L${level} 答對`,`L${level} 答錯`,`L${level} 正確率`);
+      row.push(stats.total,stats.correct,Math.max(0,stats.total-stats.correct),stats.total ? `${Math.round(stats.correct/stats.total*100)}%` : "--");
+    });
+    downloadStudentCsv(`有理數乘除_個人總體數據_${fileStamp()}_${student.className}_${student.id}號.csv`, [headers,row]);
+  });
+}
+
+function downloadStudentMistakes() {
+  return withStudentDownload("download-student-mistakes", async () => {
+    const data = await getStudentExportData();
+    const mistakes = data.wrongAnswers || [];
+    const rows = [["時間","班別","學號","姓名","Level","題目","學生答案","正確答案"]];
+    mistakes.forEach((item) => rows.push([item.timestamp,player.className,player.id,player.name,item.level,item.question,item.studentAnswer,item.correctAnswer]));
+    downloadStudentCsv(`有理數乘除_錯題數據_${fileStamp()}_${player.className}_${player.id}號.csv`, rows);
+  });
+}
+
+function downloadStudentCsv(filename, rows) {
+  const content = `\ufeff${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;
+  const url = URL.createObjectURL(new Blob([content], { type:"text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function csvCell(value) { return `"${String(value ?? "").replaceAll('"','""')}"`; }
+function fileStamp() { return new Date().toISOString().slice(0,10); }
 
 function scheduleSync() {
   syncQueued = true;

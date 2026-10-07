@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#111827">
   <title>有理數乘除訓練場</title>
-  <link rel="stylesheet" href="styles.css?v=20261007">
+  <link rel="stylesheet" href="styles.css?v=20261007c">
   <script async id="lucide-script" src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
   <script defer src="vendor/fraction.min.js"></script>
   <script defer src="math-renderer.js"></script>
   <script defer src="game-core.js"></script>
   <script defer src="config.js"></script>
-  <script defer src="app.js?v=20261007b"></script>
+  <script defer src="app.js?v=20261007c"></script>
 </head>
 <body>
   <section id="login-screen" class="login-screen">
@@ -60,6 +60,11 @@
         <button type="button" role="tab" aria-selected="false" data-stats-level="4">L4</button>
       </div>
     </nav>
+    <div class="student-downloads" aria-label="下載個人學習數據">
+      <button id="download-student-overall" type="button"><i data-lucide="file-down"></i><span>總體數據</span></button>
+      <button id="download-student-mistakes" type="button"><i data-lucide="list-x"></i><span>錯題數據</span></button>
+      <span id="student-download-status" role="status" aria-live="polite"></span>
+    </div>
 
     <section class="level-strip" aria-label="關卡進度">
       <div class="level-copy">

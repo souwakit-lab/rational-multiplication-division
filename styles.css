@@ -68,6 +68,12 @@ button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
 .stats-level-filter button { min-width:43px; min-height:28px; padding:4px 9px; border:0; border-right:1px solid var(--line); color:var(--muted); background:var(--panel); font-size:11px; font-weight:800; cursor:pointer; }
 .stats-level-filter button:last-child { border-right:0; }
 .stats-level-filter button.active { color:var(--ink); background:var(--sky); }
+.student-downloads { display:flex; align-items:center; justify-content:flex-end; gap:7px; margin:-3px 0 10px; }
+.student-downloads button { display:flex; align-items:center; gap:6px; min-height:32px; padding:5px 10px; border:1px solid var(--line); border-radius:4px; color:var(--text); background:var(--panel); font-size:11px; font-weight:700; cursor:pointer; }
+.student-downloads button:hover:not(:disabled) { border-color:var(--sky); }
+.student-downloads button:disabled { opacity:.55; cursor:wait; }
+.student-downloads button svg { width:15px; }
+.student-downloads > span { min-width:110px; color:var(--muted); font-size:10px; }
 
 .level-strip { display: grid; grid-template-columns: 190px 1fr auto; align-items: center; gap: 26px; margin: 10px 0 16px; padding: 14px 18px; border: 1px solid var(--line); border-left: 4px solid var(--mint); background: rgba(24, 34, 53, .94); }
 .level-copy span, .xp-label span { color: var(--muted); font-size: 11px; font-weight: 700; }
@@ -237,6 +243,7 @@ dialog::backdrop { background: rgba(5, 9, 16, .78); backdrop-filter: blur(4px); 
   .student-stats span { font-size: 9px; }
   .student-stats strong { font-size: 16px; }
   .stats-level-filter { justify-content:space-between; }
+  .student-downloads { justify-content:flex-start; flex-wrap:wrap; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -264,5 +271,7 @@ dialog::backdrop { background: rgba(5, 9, 16, .78); backdrop-filter: blur(4px); 
   .stats-level-filter > span { display:none; }
   .stats-level-filter > div { width:100%; }
   .stats-level-filter button { flex:1; min-width:0; }
+  .student-downloads button { flex:1; justify-content:center; }
+  .student-downloads > span { width:100%; min-width:0; }
   .keypad { grid-template-columns: repeat(4, minmax(48px, 1fr)); grid-template-rows: repeat(4, 54px); gap: 7px; }
 }

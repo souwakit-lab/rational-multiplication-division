@@ -3,7 +3,7 @@ const REFRESH_INTERVAL_MS = 8000;
 let refreshTimer;
 let refreshInFlight = false;
 let refreshPending = false;
-let latestData = { players: [], bossHp: 0, bossMaxHp: 50000 };
+let latestData = { players: [], bossHp: 0, bossMaxHp: 300000 };
 let toastTimer;
 const $ = (id) => document.getElementById(id);
 
@@ -38,7 +38,7 @@ function initQrCode() {
 
 async function refreshData() {
   if (!API_URL) {
-    renderDashboard({ players:[], levelStats:[], bossHp:50000, bossMaxHp:50000 });
+    renderDashboard({ players:[], levelStats:[], bossHp:300000, bossMaxHp:300000 });
     $("updated-at").textContent = "本機預覽";
     return;
   }
@@ -63,7 +63,7 @@ function renderDashboard(data) {
   const players = data.players || [];
   const totalAnswers = players.reduce((sum, player) => sum + Number(player.total || 0), 0);
   const totalCorrect = players.reduce((sum, player) => sum + Number(player.correct || 0), 0);
-  const bossMaxHp = Number(data.bossMaxHp) || 50000;
+  const bossMaxHp = Number(data.bossMaxHp) || 300000;
   const bossHp = Math.max(0, Number(data.bossHp) || 0);
   $("boss-copy").textContent = `${Math.round(bossHp).toLocaleString("zh-Hant")} / ${bossMaxHp.toLocaleString("zh-Hant")}`;
   $("boss-bar").style.width = `${Math.min(100, (bossHp / bossMaxHp) * 100)}%`;
@@ -157,16 +157,43 @@ async function downloadData() {
     const response = await fetch(`${API_URL}?action=getRationalMulDivExportData&className=${encodeURIComponent(className)}&t=${Date.now()}`, { cache: "no-store" });
     if (!response.ok) throw new Error("Unable to export data");
     const data = await response.json();
-    const rows = [["時間","班別","學號","姓名","程度","題目","學生答案","正確答案","是否正確"]];
-    data.answers.forEach((answer) => rows.push([answer.timestamp,answer.className,answer.id,answer.name,answer.level,answer.question,answer.studentAnswer,answer.correctAnswer,answer.isCorrect ? "是" : "否"]));
-    downloadBlob(`有理數乘除作答數據_${fileStamp()}_${selectedScopeLabel()}.csv`, `\ufeff${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`, "text/csv;charset=utf-8");
-    showToast(`已下載 ${data.answers.length} 筆作答數據`);
+    const rows = buildStudentSummaryRows(data);
+    downloadBlob(`有理數乘除學生總體數據_${fileStamp()}_${selectedScopeLabel()}.csv`, `\ufeff${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`, "text/csv;charset=utf-8");
+    showToast(`已下載 ${Math.max(0, rows.length - 1)} 名學生的總體數據`);
   } catch (error) {
     console.error(error);
     showToast("下載失敗，請檢查網絡後重試");
   } finally {
     button.disabled = false;
   }
+}
+
+function buildStudentSummaryRows(data) {
+  const students = new Map((data.players || []).map((player) => [`${player.className}:${player.id}`, { ...player }]));
+  const perLevel = new Map();
+  (data.answers || []).forEach((answer) => {
+    const key = `${answer.className}:${answer.id}`;
+    if (!students.has(key)) students.set(key, { className:answer.className, id:answer.id, name:answer.name, level:1, xp:0, total:0, correct:0, streak:0, mistakes:0 });
+    if (!perLevel.has(key)) perLevel.set(key, [1,2,3,4].map(() => ({ total:0, correct:0 })));
+    const level = Math.min(4, Math.max(1, Number(answer.level) || 1));
+    const stats = perLevel.get(key)[level - 1];
+    stats.total += 1;
+    if (answer.isCorrect) stats.correct += 1;
+  });
+  const headers = ["班別","學號","姓名","目前 Level","目前 XP","累積 XP","總作答","答對","答錯","正確率","目前連勝","連錯"];
+  [1,2,3,4].forEach((level) => headers.push(`L${level} 作答`,`L${level} 答對`,`L${level} 答錯`,`L${level} 正確率`));
+  const rows = [headers];
+  [...students.entries()].sort((a,b) => a[1].className.localeCompare(b[1].className) || Number(a[1].id) - Number(b[1].id)).forEach(([key, player]) => {
+    const levels = perLevel.get(key) || [1,2,3,4].map(() => ({ total:0, correct:0 }));
+    const recordedTotal = levels.reduce((sum, stats) => sum + stats.total, 0);
+    const recordedCorrect = levels.reduce((sum, stats) => sum + stats.correct, 0);
+    const total = Number(player.total || recordedTotal);
+    const correct = Number(player.correct || recordedCorrect);
+    const row = [player.className,player.id,player.name,player.level,player.xp,totalXp(player),total,correct,Math.max(0,total-correct),total ? `${Math.round(correct/total*100)}%` : "--",player.streak,player.mistakes];
+    levels.forEach((stats) => row.push(stats.total,stats.correct,Math.max(0,stats.total-stats.correct),stats.total ? `${Math.round(stats.correct/stats.total*100)}%` : "--"));
+    rows.push(row);
+  });
+  return rows;
 }
 
 function downloadReport() {
