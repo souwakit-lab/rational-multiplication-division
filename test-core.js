@@ -28,6 +28,11 @@ for (let level = 1; level <= 4; level += 1) {
     assert.ok(Number.isFinite(item.answer.valueOf()));
     assert.ok(Array.isArray(item.steps) && item.steps.length >= 3);
     assert.equal(core.parseAnswer(item.answer.toFraction()).equals(item.answer), true);
+    assert.equal(core.isAnswerCorrect(item.answer.toFraction(), item.answer), true);
+    if (level === 1 && item.type === "兩個整數相乘") {
+      const operands = item.tex.match(/\d+/g).map(Number);
+      assert.ok(operands.every((value) => value >= 1 && value <= 9));
+    }
     types.add(item.type);
   }
   seenTypes.set(level, types);
@@ -43,6 +48,10 @@ assert.equal(core.parseAnswer("-1.25").equals(core.parseAnswer("-5/4")), true);
 assert.equal(core.parseAnswer("1/0"), null);
 assert.equal(core.parseAnswer("1."), null);
 assert.equal(core.parseAnswer("abc"), null);
+assert.equal(core.isAnswerCorrect("8/2", core.parseAnswer("4")), false);
+assert.equal(core.isAnswerCorrect("2/1", core.parseAnswer("2")), false);
+assert.equal(core.isAnswerCorrect("1/2", core.parseAnswer("1/2")), true);
+assert.equal(core.isAnswerCorrect("0.5", core.parseAnswer("1/2")), true);
 
 const base = { level:1, xp:1485, total:0, correct:0, streak:0 };
 let result = core.applyResult(base, true);

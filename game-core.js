@@ -65,8 +65,8 @@
   function generateLevel1(rng) {
     const multiply = rng() < 0.5;
     if (multiply) {
-      const left = nonZeroInt(-12, 12, rng);
-      const right = nonZeroInt(-12, 12, rng);
+      const left = nonZeroInt(-9, 9, rng);
+      const right = nonZeroInt(-9, 9, rng);
       const answer = new FractionClass(left).mul(right);
       return question(1, "兩個整數相乘", `${integerTex(left, true)} \\times ${integerTex(right, true)}`, answer, [
         signRule([new FractionClass(left), new FractionClass(right)], "\\times"),
@@ -246,6 +246,21 @@
     }
   }
 
+  function isAnswerCorrect(raw, expected) {
+    const text = String(raw || "").trim();
+    const answer = parseAnswer(text);
+    if (!answer || !answer.equals(expected)) return false;
+    if (!text.includes("/")) return true;
+
+    const [numeratorText, denominatorText] = text.split("/");
+    const numerator = Math.abs(Number(numeratorText));
+    const denominator = Number(denominatorText);
+    let a = numerator;
+    let b = denominator;
+    while (b) [a, b] = [b, a % b];
+    return denominator > 1 && a === 1;
+  }
+
   function applyResult(progress, isCorrect) {
     const next = { ...progress };
     next.total += 1;
@@ -274,5 +289,5 @@
     return { progress: next, leveledUp, completed };
   }
 
-  return { LEVEL_XP, getLevelXp, generateQuestion, parseAnswer, fractionTex, applyResult };
+  return { LEVEL_XP, getLevelXp, generateQuestion, parseAnswer, isAnswerCorrect, fractionTex, applyResult };
 });

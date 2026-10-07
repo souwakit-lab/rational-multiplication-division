@@ -262,7 +262,7 @@ function submitAnswer() {
   const answer = core.parseAnswer(entry);
   if (!answer) return;
   locked = true;
-  const correct = answer.equals(question.answer);
+  const correct = core.isAnswerCorrect(entry, question.answer);
   const result = core.applyResult(progress, correct);
   progress = result.progress;
   const levelStats = normalizeLevelStats(progress.levelStats);
